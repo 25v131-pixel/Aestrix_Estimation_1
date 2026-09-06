@@ -20,6 +20,7 @@ import pandas as pd
 from transform import load_and_transform
 from clustering import cluster_detections
 from static_kalman_filter import fuse_all_clusters
+from plot_map import plot_cone_map
 
 
 def run(
@@ -55,9 +56,13 @@ def run(
         how="left",
     )
 
+    #----- plot cone maps ------------------------------------------
+    plot_cone_map(fused_all, output_path=os.path.join(output_dir, "cone_map.png"))
+
     real_map = fused_all[~fused_all["is_ghost_candidate"]].reset_index(drop=True)
     ghost_candidates = fused_all[fused_all["is_ghost_candidate"]].reset_index(drop=True)
 
+    
     # ---- outputs -------------------------------------------------
     detections_path = os.path.join(output_dir, "global_cone_observations.csv")
     detections_clustered.to_csv(detections_path, index=False)
