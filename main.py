@@ -6,7 +6,7 @@ from src.association import dbscan_association
 from src.plot_map import plot_global_map
 
 PERCEPTION_FILE = "data/perception_log.csv"
-TELEMETRY_FILE = "data/telemetry_log(1).csv"
+TELEMETRY_FILE = "data/telemetry_log.csv"
 
 GLOBAL_CSV = "outputs/global_cone_observations.csv"
 FINAL_CSV = "outputs/final_cone_map.csv"

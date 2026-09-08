@@ -2,5 +2,4 @@ __pycache__/
 *.pyc
 .vscode/
 .idea/
-data/*.csv
 outputs/
