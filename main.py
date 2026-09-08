@@ -1,17 +1,18 @@
-
 import os
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from src.coordinate_transform import map_cones_to_global
 from src.association import dbscan_association
-from src.plot_map import plot_global_map
+
 
 PERCEPTION_FILE = "data/perception_log.csv"
 TELEMETRY_FILE = "data/telemetry_log.csv"
 
 GLOBAL_CSV = "outputs/global_cone_observations.csv"
 FINAL_CSV = "outputs/final_cone_map.csv"
-
 MAP_PNG = "outputs/final_reconstructed_map.png"
+
 
 def main():
 
@@ -56,9 +57,7 @@ def main():
         min_samples=5
     )
 
-    print(
-        f"  Estimated cones: {len(dbscan_cones)}"
-    )
+    print(f"  Estimated cones: {len(dbscan_cones)}")
 
     print(
         f"  Left cones: "
@@ -105,80 +104,75 @@ def main():
     )
 
     print()
+
+    # --------------------------------------------------
+    # Stage 4: Generate final reconstructed map
+    # --------------------------------------------------
+
+    print("Stage 4: generating final reconstructed map")
+
+    left_cones = final_cones[
+        final_cones["cone_type"] == "left"
+    ]
+
+    right_cones = final_cones[
+        final_cones["cone_type"] == "right"
+    ]
+
+    telemetry = pd.read_csv(TELEMETRY_FILE)
+
+    plt.figure(figsize=(12, 8))
+
+    plt.scatter(
+        left_cones["x"],
+        left_cones["y"],
+        s=80,
+        marker="o",
+        label="Reconstructed left cones"
+    )
+
+    plt.scatter(
+        right_cones["x"],
+        right_cones["y"],
+        s=80,
+        marker="o",
+        label="Reconstructed right cones"
+    )
+
+    plt.plot(
+        telemetry["x"],
+        telemetry["y"],
+        linewidth=2,
+        label="Vehicle trajectory"
+    )
+
+    plt.scatter(
+        telemetry["x"].iloc[0],
+        telemetry["y"].iloc[0],
+        s=100,
+        marker="*",
+        label="Start"
+    )
+
+    plt.xlabel("Global X (m)")
+    plt.ylabel("Global Y (m)")
+    plt.title("Final Reconstructed Cone Map")
+    plt.axis("equal")
+    plt.grid(True)
+    plt.legend()
+
+    plt.savefig(
+        MAP_PNG,
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+    print(f"  Final map written to {MAP_PNG}")
+    print()
     print("Pipeline completed successfully.")
-   # --------------------------------------------------
-# Stage 4: Generate final reconstructed map
-# --------------------------------------------------
 
-print("Stage 4: generating final reconstructed map")
 
-import pandas as pd
-import matplotlib.pyplot as plt
-
-# Load the final 72-cone map produced in Stage 3
-final_cones = pd.read_csv(FINAL_CSV)
-
-left_cones = final_cones[
-    final_cones["cone_type"] == "left"
-]
-
-right_cones = final_cones[
-    final_cones["cone_type"] == "right"
-]
-
-telemetry = pd.read_csv(TELEMETRY_FILE)
-
-plt.figure(figsize=(12, 8))
-
-plt.scatter(
-    left_cones["x"],
-    left_cones["y"],
-    s=80,
-    marker="o",
-    label="Reconstructed left cones"
-)
-
-plt.scatter(
-    right_cones["x"],
-    right_cones["y"],
-    s=80,
-    marker="o",
-    label="Reconstructed right cones"
-)
-
-plt.plot(
-    telemetry["x"],
-    telemetry["y"],
-    linewidth=2,
-    label="Vehicle trajectory"
-)
-
-plt.scatter(
-    telemetry["x"].iloc[0],
-    telemetry["y"].iloc[0],
-    s=100,
-    marker="*",
-    label="Start"
-)
-
-plt.xlabel("Global X (m)")
-plt.ylabel("Global Y (m)")
-plt.title("Final Reconstructed Cone Map")
-plt.axis("equal")
-plt.grid(True)
-plt.legend()
-
-plt.savefig(
-    MAP_PNG,
-    dpi=300,
-    bbox_inches="tight"
-)
-
-plt.close()
-
-print(f"  Final map written to {MAP_PNG}")
-
-print()
-print("Pipeline completed successfully.")
 if __name__ == "__main__":
     main()
