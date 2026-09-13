@@ -1,9 +1,51 @@
 import numpy as np
 import pandas as pd
 
+def unwrap_yaw_step(previous_yaw_unwrapped, new_yaw_raw):
+    """
+    Incrementally unwrap a single new yaw sample given the
+    previous unwrapped yaw. This replaces np.unwrap() for online use.
+
+    Parameters
+    ----------
+    previous_yaw_unwrapped : float
+        The previous timestep's unwrapped yaw (radians).
+        On the very first call, pass the raw yaw value itself.
+
+    new_yaw_raw : float
+        The newly arrived raw yaw sample (radians, wrapped to
+        [-pi, pi] as usual).
+
+    Returns
+    -------
+    float
+        The new sample's unwrapped yaw, continuous with the
+        previous value.
+    """
+
+    delta = new_yaw_raw - (
+        previous_yaw_unwrapped
+        - 2 * np.pi * np.floor(
+            (previous_yaw_unwrapped + np.pi) / (2 * np.pi)
+        )
+    )
+
+    # Wrap delta into [-pi, pi] so we detect the shortest
+    # angular step, then accumulate onto the unwrapped total.
+    delta = (delta + np.pi) % (2 * np.pi) - np.pi
+
+    return previous_yaw_unwrapped + delta
 
 def map_cones_to_global(perception_csv, telemetry_csv, camera_offset=(0.0, 0.0)):
     """
+    OFFLINE OR BATCH WISE USE ONLY
+
+    Retained from Phase 1 for regression-testing the online
+    pipeline's output against the original batch transform.The 
+    online pipeline (main.py) uses transform_single_detection()
+    below instead, called once per incoming detection with the
+    already-current vehicle pose
+
     Convert cone detections from a backward-facing sensor frame
     into global map coordinates.
 
@@ -286,6 +328,70 @@ def map_cones_to_global(perception_csv, telemetry_csv, camera_offset=(0.0, 0.0))
 
     return output
 
+def transform_single_detection(
+    rel_x_sensor,
+    rel_y_sensor,
+    vehicle_x,
+    vehicle_y,
+    vehicle_yaw_unwrapped,
+    camera_offset=(0.0, 0.0)
+):
+    """
+    Transform ONE cone detection from the backward-facing sensor
+    frame into global coordinates, given the vehicle pose already
+    resolved for this timestamp.
+
+    This is the online counterpart to map_cones_to_global's
+    per-row math (steps 7-8 of that function), extracted so it
+    can be called once per incoming detection inside a streaming
+    loop, without touching disk.
+
+    Parameters
+    ----------
+    rel_x_sensor, rel_y_sensor : float
+        Cone position in the raw (backward-facing) sensor frame.
+
+    vehicle_x, vehicle_y : float
+        Vehicle global position at the detection timestamp.
+
+    vehicle_yaw_unwrapped : float
+        Vehicle yaw (radians), already unwrapped via
+        unwrap_yaw_step for this timestamp.
+
+    camera_offset : tuple of float
+        Sensor mounting offset in the vehicle frame.
+
+    Returns
+    -------
+    (global_x, global_y) : tuple of float
+    """
+
+    camera_offset = np.asarray(camera_offset, dtype=float)
+
+    # ---- Step A: 180-degree sensor mount correction ----
+    # Same correction as section 7 of map_cones_to_global:
+    # must happen BEFORE the SE(2) rotation below, as two
+    # distinct steps.
+    vehicle_relative_x = -rel_x_sensor + camera_offset[0]
+    vehicle_relative_y = -rel_y_sensor + camera_offset[1]
+
+    # ---- Step B: SE(2) vehicle-to-global transform ----
+    cos_yaw = np.cos(vehicle_yaw_unwrapped)
+    sin_yaw = np.sin(vehicle_yaw_unwrapped)
+
+    global_x = (
+        vehicle_x
+        + cos_yaw * vehicle_relative_x
+        - sin_yaw * vehicle_relative_y
+    )
+
+    global_y = (
+        vehicle_y
+        + sin_yaw * vehicle_relative_x
+        + cos_yaw * vehicle_relative_y
+    )
+
+    return global_x, global_y
 
 # =============================================================
 # Example execution
