@@ -4,7 +4,7 @@ import pandas as pd
 from src.coordinate_transform import unwrap_yaw_step, transform_single_detection
 from src.clustering import associate_single_detection
 from src.static_kalman_filter import init_track, predict_track, update_track
-# from src.ghost_rejection import evaluate_track
+from src.ghost_rejection import record_detection, evaluate_track
 from src.plot_map import plot_track_map, plot_track_map_sequence
 
 PERCEPTION_FILE = "data/perception_log.csv"
@@ -101,22 +101,19 @@ def main():
                     new_track["cone_type"] = detection["cone_type"]
                     new_track["last_seen"] = timestamp
                     new_track["last_predicted_time"] = timestamp
-                    new_track["hit_count"] = 1
                     new_track["status"] = "candidate"
+                    record_detection(new_track, global_x, global_y, detection["confidence"])
 
                     tracks[matched_id] = new_track
                 else:
                     track = tracks[matched_id]
-                    update_track(
-                        track, global_x, global_y, detection["confidence"]
-                    )
+                    record_detection(track, global_x, global_y, detection["confidence"])
+                    update_track(track, global_x, global_y, detection["confidence"])
                     track["last_seen"] = timestamp
-                    track["hit_count"] += 1
 
         # ---- Step 4: ghost rejection / lifecycle update ----
         for track in tracks.values():
-            # track["status"] = evaluate_track(track, timestamp)
-            pass  # placeholder pending ghost_rejection.py
+            evaluate_track(track)
 
         # ---- Step 5: periodic snapshot for the live demo ----
         if tick_index % SNAPSHOT_INTERVAL_TICKS == 0:
