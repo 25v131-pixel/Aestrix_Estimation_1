@@ -1,3 +1,14 @@
+"""
+    REJECTED FOR PHASE 2
+    NN+chi-squared gating is being used (in clustering.py)
+
+    DO NOT INTEGRATE THIS FILE
+"""
+
+
+
+
+
 
 import pandas as pd
 from sklearn.cluster import DBSCAN
