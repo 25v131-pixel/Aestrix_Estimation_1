@@ -16,6 +16,7 @@ from config import (
     SNAPSHOT_INTERVAL_TICKS, DEFAULT_CONFIG,
 )
 
+
 def run_pipeline_online(
     perception_csv=PERCEPTION_FILE,
     telemetry_csv=TELEMETRY_FILE,
@@ -84,7 +85,8 @@ def run_pipeline_online(
                     rel_y_sensor=detection_row["rel_y_sensor"],
                     vehicle_x=vehicle_x, vehicle_y=vehicle_y,
                     vehicle_yaw_unwrapped=previous_yaw,
-                    camera_offset=camera_offset
+                    camera_offset=camera_offset,
+                    apply_sensor_correction=apply_sensor_correction,
                 )
 
                 detection = {
