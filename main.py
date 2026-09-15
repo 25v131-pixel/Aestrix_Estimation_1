@@ -10,6 +10,7 @@ from src.clustering import associate_single_detection
 from src.static_kalman_filter import init_track, predict_track, update_track
 from src.ghost_rejection import record_detection, evaluate_track
 from src.plot_map import plot_track_map, plot_track_map_sequence
+from src.data_io import load_telemetry, load_perception, ensure_output_dir, save_tracks_csv
 from config import (
     PERCEPTION_FILE, TELEMETRY_FILE, OUTPUT_DIR,
     FINAL_TRACKS_CSV, FINAL_MAP_PNG, DEMO_FRAMES_DIR,
@@ -53,9 +54,8 @@ def run_pipeline_online(
         enable_spatial_consistency_filter=merged_config["enable_spatial_consistency_filter"],
     )
 
-    telemetry = pd.read_csv(telemetry_csv).sort_values("timestamp").reset_index(drop=True)
-    perception = pd.read_csv(perception_csv).sort_values("timestamp").reset_index(drop=True)
-    grouped_detections = perception.groupby("timestamp")
+    telemetry = load_telemetry(telemetry_csv)
+    perception, grouped_detections = load_perception(perception_csv)
 
     tracks = {}
     next_track_id = 0
@@ -187,7 +187,7 @@ def main():
     print("Aestrix Online Cone Mapping (Phase 2)")
     print()
 
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    ensure_output_dir(OUTPUT_DIR)
 
     result = run_pipeline_online(
         PERCEPTION_FILE, TELEMETRY_FILE,
@@ -198,7 +198,7 @@ def main():
     track_snapshots = result["track_snapshots"]
 
     final_tracks_df = full_tracks_dataframe(result)
-    final_tracks_df.to_csv(FINAL_TRACKS_CSV, index=False)
+    save_tracks_csv(final_tracks_df, FINAL_TRACKS_CSV)
     print(f"Final tracks written to {FINAL_TRACKS_CSV}")
 
     plot_track_map(FINAL_TRACKS_CSV, TELEMETRY_FILE, FINAL_MAP_PNG)
