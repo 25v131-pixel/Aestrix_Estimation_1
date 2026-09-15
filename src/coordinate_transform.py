@@ -334,7 +334,8 @@ def transform_single_detection(
     vehicle_x,
     vehicle_y,
     vehicle_yaw_unwrapped,
-    camera_offset=(0.0, 0.0)
+    camera_offset=(0.0, 0.0),
+    apply_sensor_correction=True,
 ):
     """
     Transform ONE cone detection from the backward-facing sensor
@@ -361,6 +362,17 @@ def transform_single_detection(
     camera_offset : tuple of float
         Sensor mounting offset in the vehicle frame.
 
+    apply_sensor_correction : bool
+        Whether to apply the 180-degree backward-mount correction
+        (Step A) before the SE(2) transform (Step B). True is the
+        physically-correct default for every real run; main.py's
+        DEFAULT_CONFIG and every ablation condition except one rely
+        on that default. False exists only for
+        ablation_study.py's "Transform Disabled (no 180deg
+        correction)" condition, to measure how much this step
+        matters by skipping straight to treating the raw
+        sensor-frame reading as if it were already vehicle-frame.
+
     Returns
     -------
     (global_x, global_y) : tuple of float
@@ -372,8 +384,17 @@ def transform_single_detection(
     # Same correction as section 7 of map_cones_to_global:
     # must happen BEFORE the SE(2) rotation below, as two
     # distinct steps.
-    vehicle_relative_x = -rel_x_sensor + camera_offset[0]
-    vehicle_relative_y = -rel_y_sensor + camera_offset[1]
+    if apply_sensor_correction:
+        vehicle_relative_x = -rel_x_sensor + camera_offset[0]
+        vehicle_relative_y = -rel_y_sensor + camera_offset[1]
+    else:
+        # Ablation only: skip the 180-degree flip, feeding the raw
+        # sensor-frame reading straight into the SE(2) transform as
+        # if it were already vehicle-frame. Deliberately "wrong" --
+        # it exists to show how badly the map degrades without the
+        # mount correction, not as a usable pipeline mode.
+        vehicle_relative_x = rel_x_sensor + camera_offset[0]
+        vehicle_relative_y = rel_y_sensor + camera_offset[1]
 
     # ---- Step B: SE(2) vehicle-to-global transform ----
     cos_yaw = np.cos(vehicle_yaw_unwrapped)

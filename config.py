@@ -22,7 +22,7 @@ FINAL_MAP_PNG = os.path.join(OUTPUT_DIR, "final_track_map.png")
 DEMO_FRAMES_DIR = os.path.join(OUTPUT_DIR, "demo_frames")
 
 # ---- Live-demo snapshot cadence ----
-SNAPSHOT_INTERVAL_TICKS = 20   # ticks between recorded map snapshots (deliverable #6)
+SNAPSHOT_INTERVAL_TICKS = 10   # ticks between recorded map snapshots (deliverable #6)
 
 # ---- Default pipeline parameters ----
 # ablation_study.py builds each condition as {**DEFAULT_CONFIG, **overrides}
